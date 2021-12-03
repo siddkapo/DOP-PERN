@@ -83,8 +83,14 @@ std::vector<std::vector<ll>> GenerateCoefficients(ll n, ll m, ll d, ll r) {
 ll ComputePolynomialOutput(std::vector<ll> coefficients, std::vector<ll> x, ll degree) {
 	x.push_back(1); // Appending the Constant Term (Degree 0 Term) in the Input --> x = [x1, x2, ..., xn, 1]
 	ll numMonomials = NumberOfMonomials((ll) x.size(), degree);
-	// TODO
 	ll result = 0;
+	// TODO: Re-implement for Generalized Degree
+	// Current Implementation Works only for Degree 2 Polynomials
+	for(ll i = 0, k = 0; i < x.size(); ++i) {
+		for(ll j = i; j < x.size(); ++j, ++k) {
+			result += x[i] * x[j] * coefficients[k];
+		}
+	}
 	return result;
 }
 
@@ -99,7 +105,7 @@ std::vector<ll> ComputePolynomialSystemOutput(std::vector<std::vector<ll>> coeff
 }
 
 // Return Max Possible Value in Codomain of Polynomial System
-ll MaxInCodomain(std::vector<std::vector<ll>> coefficients, ll n, ll degree, ll l) {
+ll GetMaxInCodomain(std::vector<std::vector<ll>> coefficients, ll n, ll degree, ll l) {
 	
 	// Replacing the Coefficients with their Absolute Values
 	for(ll i = 0; i < coefficients.size(); ++i) {
@@ -142,18 +148,66 @@ ll GetNextPrime(ll base) {
 	}
 	return nextPrime;
 }
+
+// Returns the r Values for the given Prime q. Else Returns Empty List
+std::vector<ll> ComputeRValues(ll n, ll q, ll mPhi, ll mPsi) {
+	std::vector<ll> rValues;
+	// TODO
+	return rValues;
+}
+
+// Returns the r Values and Prime q by Automatically Updating the Prime q
+std::pair<ll, std::vector<ll>> GetRValues(ll n, ll mPhi, ll mPsi) {
+	ll base = 4 * mPhi * mPsi; // Prime q > 4 * mPhi * mPsi
+	ll q; // Large Prime Number
+	std::vector<ll> rValues; // List of the r Values;
+	while(rValues.size() != n) {
+		q = GetNextPrime(base);
+		rValues.clear();
+		rValues = ComputeRValues(n, q, mPhi, mPsi);
+		base = q;
+	}
+	return std::make_pair(q, rValues);
+}
+
+// Returns the Central Map G = (phi + r * psi) mod q
+std::vector<std::vector<ll>> GetCentralMap(std::vector<std::vector<ll>> phiCoefficients, std::vector<std::vector<ll>> psiCoefficients, std::vector<ll> rValues, ll q, ll n) {
+	std::vector<std::vector<ll>> centralMap;
+	ll numMonomials = phiCoefficients[0].size(); // Both phi and psi have Same Number of Monomials
+	for(ll i = 0; i < n; ++i) {
+		ll ri = rValues[i];
+		std::vector<ll> polyi;
+		for(ll j = 0; j < numMonomials; ++j) {
+			ll coeff = phiCoefficients[i][j] + psiCoefficients[i][j] * ri;
+			coeff = Modulo(coeff, q);
+			polyi.push_back(coeff);
+		}
+		centralMap.push_back(polyi);
+	}
+	return centralMap;
+}
+
 // Generate Public Private Key Pair
 void GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	
 	std::vector<std::vector<ll>> phiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Phi Polynomial System
 	std::vector<std::vector<ll>> psiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Psi Polynomial System
-	// privateKey.phi = phiCoefficients;
-	// privateKey.psi = psiCoefficients;
 	
-	ll mPhi = MaxInCodomain(phiCoefficients, n, degree, l); // Largest Value in Codomain of Phi
-	ll mPsi = MaxInCodomain(psiCoefficients, n, degree, l); // Largest Value in Codomain of Psi
+	ll mPhi = GetMaxInCodomain(phiCoefficients, n, degree, l); // Largest Value in Codomain of Phi
+	ll mPsi = GetMaxInCodomain(psiCoefficients, n, degree, l); // Largest Value in Codomain of Psi
 	
-	// TODO
+	std::pair<ll, std::vector<ll>> result = GetRValues(n, mPhi, mPsi); // r Values and Prime q
+	ll q = result.first; // Large Prime q
+	std::vector<ll> rValues = result.second; // r Values
+
+	std::vector<std::vector<ll>> centralMapG = GetCentralMap(phiCoefficients, psiCoefficients, rValues, q, n); // The Central Map G
+	
+	// Get Affine Isomorphism T
+
+	// Compute the Final Map F = T o G(x) --> Composition of T and G
+
+	// Save to publicKey and privateKey
+
 	return;
 }
 
