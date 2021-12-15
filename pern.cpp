@@ -11,8 +11,7 @@ typedef struct PrivateKey {
 	std::vector<std::vector<ll>> phi;
 	std::vector<std::vector<ll>> psi;
 	std::vector<ll> r;
-	// Affine Transform T
-	// TODO
+	std::vector<std::vector<ll>> T;
 } PrivateKey;
 
 PublicKey publicKey; // Public Key
@@ -152,7 +151,35 @@ ll GetNextPrime(ll base) {
 // Returns the r Values for the given Prime q. Else Returns Empty List
 std::vector<ll> ComputeRValues(ll n, ll q, ll mPhi, ll mPsi) {
 	std::vector<ll> rValues;
-	// TODO
+	ll base = 2 * mPhi;
+	ll prevBase;
+	
+	for(ll i = 1; i <= n; ++i) {
+		prevBase = base;
+		for(ll r = base + 1; r < q; ++r) {
+			bool flag = true;
+			for(ll k = 1; k <= 2 * mPsi; ++k) {
+				if(std::abs(LeastAbsoluteRemainder(r * k, q)) <= 2 * mPhi) {
+					flag = false;
+					break;
+				}
+			}
+			if(flag) {
+				rValues.push_back(r);
+				base = r;
+				break;
+			}
+		}
+		// If No More r Values are Found, Break the Loop
+		if(base == prevBase) {
+			break; 
+		}
+	}
+
+	// If n Distinct r Values are not Found, Empty the Vector
+	if(rValues.size() != n) {
+		rValues.clear();
+	}
 	return rValues;
 }
 
@@ -175,16 +202,29 @@ std::vector<std::vector<ll>> GetCentralMap(std::vector<std::vector<ll>> phiCoeff
 	std::vector<std::vector<ll>> centralMap;
 	ll numMonomials = phiCoefficients[0].size(); // Both phi and psi have Same Number of Monomials
 	for(ll i = 0; i < n; ++i) {
-		ll ri = rValues[i];
 		std::vector<ll> polyi;
 		for(ll j = 0; j < numMonomials; ++j) {
-			ll coeff = phiCoefficients[i][j] + psiCoefficients[i][j] * ri;
+			ll coeff = phiCoefficients[i][j] + psiCoefficients[i][j] * rValues[i];
 			coeff = Modulo(coeff, q);
 			polyi.push_back(coeff);
 		}
 		centralMap.push_back(polyi);
 	}
 	return centralMap;
+}
+
+// Generate a Random Affine Tranformation over the Field (Fq)^n
+std::vector<std::vector<ll>> GetAffineTransformation(ll n, ll q) {
+	std::vector<std::vector<ll>> affineT;
+	// TODO
+	return affineT;
+}
+
+// Computes the Final Central Map (the Public Key) F = T o G(x)
+std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> affineT, std::vector<std::vector<ll>> centralMapG) {
+	std::vector<std::vector<ll>> polynomialMapF;
+	// TODO
+	return polynomialMapF;
 }
 
 // Generate Public Private Key Pair
@@ -202,11 +242,18 @@ void GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 
 	std::vector<std::vector<ll>> centralMapG = GetCentralMap(phiCoefficients, psiCoefficients, rValues, q, n); // The Central Map G
 	
-	// Get Affine Isomorphism T
+	std::vector<std::vector<ll>> affineT = GetAffineTransformation(n, q); // Random Affine Transformation T
 
-	// Compute the Final Map F = T o G(x) --> Composition of T and G
+	std::vector<std::vector<ll>> polynomialMapF = GetFinalPolynomialMap(affineT, centralMapG); // Final Polynomial Map and Public Key F
 
-	// Save to publicKey and privateKey
+	// Save to publicKey
+	publicKey.F = polynomialMapF;
+
+	// Save to privateKey
+	privateKey.phi = phiCoefficients;
+	privateKey.psi = psiCoefficients;
+	privateKey.r = rValues;
+	privateKey.T = affineT;
 
 	return;
 }
