@@ -15,8 +15,8 @@ typedef struct PrivateKey {
 	std::vector<std::vector<ll>> T;
 } PrivateKey;
 
-PublicKey publicKey; // Public Key
-PrivateKey privateKey; // Private Key
+// PublicKey publicKey; // Public Key
+// PrivateKey privateKey; // Private Key
 
 // std::srand((unsigned) std::time(NULL)); // Setting a New Seed Value on Every Run
 
@@ -217,54 +217,80 @@ std::vector<std::vector<ll>> GetCentralMap(std::vector<std::vector<ll>> phiCoeff
 // Generate a Random Affine Tranformation over the Field (Fq)^n
 std::vector<std::vector<ll>> GetAffineTransformation(ll n, ll q) {
 	std::vector<std::vector<ll>> affineT;
-	// TODO
+	for(ll i = 0; i < n; ++i) {
+		affineT.push_back(GenerateRandom(n, 0, q - 1));
+	}
 	return affineT;
+}
+
+std::vector<std::vector<ll>> MatrixMultiplication(std::vector<std::vector<ll>> matA, std::vector<std::vector<ll>> matB) {
+	std::vector<std::vector<ll>> productMat;
+	if(matA[0].size() != matB.size()) {
+		std::cout << "ERROR : Matrix dimensions do not match for multiplication.\n";
+		return productMat;
+	}
+
+	for(ll i = 0; i < matA.size(); ++i) {
+		std::vector<ll> product;
+		ll tmpProd;
+		for(ll c = 0; c < matB[0].size(); ++c) {
+			tmpProd = 0;
+			for(ll j = 0; j < matA[i].size(); ++j) {
+				tmpProd += matA[i][j] * matB[j][c];
+			}
+			product.push_back(tmpProd);
+		}
+		productMat.push_back(product);
+	}
+	return productMat;
 }
 
 // Computes the Final Central Map (the Public Key) F = T o G(x)
 std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> affineT, std::vector<std::vector<ll>> centralMapG) {
 	std::vector<std::vector<ll>> polynomialMapF;
-	// TODO
+	polynomialMapF = MatrixMultiplication(affineT, centralMapG);
 	return polynomialMapF;
 }
 
 // Generate Public Private Key Pair
-void GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
+std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	
-	std::cout << "Generating Phi...\n";
+	// std::cout << "Generating Phi...\n";
 	std::vector<std::vector<ll>> phiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Phi Polynomial System
-	std::cout << "Generating Psi...\n";
+	// std::cout << "Generating Psi...\n";
 	std::vector<std::vector<ll>> psiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Psi Polynomial System
 	
-	std::cout << "Getting max of Phi...\n";
+	// std::cout << "Getting max of Phi...\n";
 	ll mPhi = GetMaxInCodomain(phiCoefficients, n, degree, l); // Largest Value in Codomain of Phi
-	std::cout << "Getting max of Psi...\n";
+	// std::cout << "Getting max of Psi...\n";
 	ll mPsi = GetMaxInCodomain(psiCoefficients, n, degree, l); // Largest Value in Codomain of Psi
 	
-	std::cout << "Generating R values...\n";
+	// std::cout << "Generating R values...\n";
 	std::pair<ll, std::vector<ll>> result = GetRValues(n, mPhi, mPsi); // r Values and Prime q
 	ll q = result.first; // Large Prime q
 	std::vector<ll> rValues = result.second; // r Values
-	std::cout << "Prime q = " << q << "\n";
+	// std::cout << "Prime q = " << q << "\n";
 
-	std::cout << "Generating Central Map G...\n";
+	// std::cout << "Generating Central Map G...\n";
 	std::vector<std::vector<ll>> centralMapG = GetCentralMap(phiCoefficients, psiCoefficients, rValues, q, n); // The Central Map G
 	
-	std::cout << "Generating Affine Transformation T...\n";
+	// std::cout << "Generating Affine Transformation T...\n";
 	std::vector<std::vector<ll>> affineT = GetAffineTransformation(n, q); // Random Affine Transformation T
 
 	std::vector<std::vector<ll>> polynomialMapF = GetFinalPolynomialMap(affineT, centralMapG); // Final Polynomial Map and Public Key F
 
 	// Save to publicKey
+	PublicKey publicKey;
 	publicKey.F = polynomialMapF;
 
 	// Save to privateKey
+	PrivateKey privateKey;
 	privateKey.phi = phiCoefficients;
 	privateKey.psi = psiCoefficients;
 	privateKey.r = rValues;
 	privateKey.T = affineT;
 
-	return;
+	return std::make_pair(publicKey, privateKey);
 }
 
 int main() {
@@ -276,9 +302,14 @@ int main() {
 	ll degree = DEGREE; // Maximum Degree of the Monomials in the Polynomial System
 	std::cin >> n >> l >> lg;
 
+	// Generating Public Private Key Pair
 	std::cout << "Generating Key Pair...\n";
 	auto startTime = std::chrono::high_resolution_clock::now();
-	GenerateKeyPair(n, l, lg, degree);
+	
+	std::pair<PublicKey, PrivateKey> keyPair = GenerateKeyPair(n, l, lg, degree);
+	PublicKey publicKey = keyPair.first;
+	PrivateKey privateKey = keyPair.second;
+	
 	auto stopTime = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
 	double execTime = duration.count() / 1000.0;
