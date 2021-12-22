@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include <chrono>
 
 #define ll long long int
 #define DEGREE 2
@@ -230,18 +231,26 @@ std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> 
 // Generate Public Private Key Pair
 void GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	
+	std::cout << "Generating Phi...\n";
 	std::vector<std::vector<ll>> phiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Phi Polynomial System
+	std::cout << "Generating Psi...\n";
 	std::vector<std::vector<ll>> psiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Psi Polynomial System
 	
+	std::cout << "Getting max of Phi...\n";
 	ll mPhi = GetMaxInCodomain(phiCoefficients, n, degree, l); // Largest Value in Codomain of Phi
+	std::cout << "Getting max of Psi...\n";
 	ll mPsi = GetMaxInCodomain(psiCoefficients, n, degree, l); // Largest Value in Codomain of Psi
 	
+	std::cout << "Generating R values...\n";
 	std::pair<ll, std::vector<ll>> result = GetRValues(n, mPhi, mPsi); // r Values and Prime q
 	ll q = result.first; // Large Prime q
 	std::vector<ll> rValues = result.second; // r Values
+	std::cout << "Prime q = " << q << "\n";
 
+	std::cout << "Generating Central Map G...\n";
 	std::vector<std::vector<ll>> centralMapG = GetCentralMap(phiCoefficients, psiCoefficients, rValues, q, n); // The Central Map G
 	
+	std::cout << "Generating Affine Transformation T...\n";
 	std::vector<std::vector<ll>> affineT = GetAffineTransformation(n, q); // Random Affine Transformation T
 
 	std::vector<std::vector<ll>> polynomialMapF = GetFinalPolynomialMap(affineT, centralMapG); // Final Polynomial Map and Public Key F
@@ -267,7 +276,13 @@ int main() {
 	ll degree = DEGREE; // Maximum Degree of the Monomials in the Polynomial System
 	std::cin >> n >> l >> lg;
 
+	std::cout << "Generating Key Pair...\n";
+	auto startTime = std::chrono::high_resolution_clock::now();
 	GenerateKeyPair(n, l, lg, degree);
+	auto stopTime = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
+	double execTime = duration.count() / 1000.0;
+	std::cout << "Time taken to generate Key Pair = " << execTime << "s\n";
 
 	std::cout << "Enter Input to Encrypt (Enter " << n << " numbers in the range [" << std::floor(-l / 2.0) + 1 << ", " << std::floor(l / 2.0) << "]):\n";
 	ll msg[n]; // Input to Encrypt
