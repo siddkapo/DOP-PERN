@@ -1,5 +1,6 @@
 #include <bits/stdc++.h>
 #include <chrono>
+#include <fstream>
 
 #define ll long long int
 #define DEGREE 2
@@ -13,6 +14,7 @@ typedef struct PrivateKey {
 	std::vector<std::vector<ll>> psi;
 	std::vector<ll> r;
 	std::vector<std::vector<ll>> T;
+	ll q;
 } PrivateKey;
 
 // PublicKey publicKey; // Public Key
@@ -223,6 +225,7 @@ std::vector<std::vector<ll>> GetAffineTransformation(ll n, ll q) {
 	return affineT;
 }
 
+// Multiply 2 Matrices of Any Dimensions
 std::vector<std::vector<ll>> MatrixMultiplication(std::vector<std::vector<ll>> matA, std::vector<std::vector<ll>> matB) {
 	std::vector<std::vector<ll>> productMat;
 	if(matA[0].size() != matB.size()) {
@@ -246,9 +249,14 @@ std::vector<std::vector<ll>> MatrixMultiplication(std::vector<std::vector<ll>> m
 }
 
 // Computes the Final Central Map (the Public Key) F = T o G(x)
-std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> affineT, std::vector<std::vector<ll>> centralMapG) {
+std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> affineT, std::vector<std::vector<ll>> centralMapG, ll q) {
 	std::vector<std::vector<ll>> polynomialMapF;
 	polynomialMapF = MatrixMultiplication(affineT, centralMapG);
+	for(ll i = 0; i < polynomialMapF.size(); ++i) {
+		for(ll j = 0; j < polynomialMapF[i].size(); ++j) {
+			polynomialMapF[i][j] = Modulo(polynomialMapF[i][j], q);
+		}
+	}
 	return polynomialMapF;
 }
 
@@ -277,20 +285,71 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	// std::cout << "Generating Affine Transformation T...\n";
 	std::vector<std::vector<ll>> affineT = GetAffineTransformation(n, q); // Random Affine Transformation T
 
-	std::vector<std::vector<ll>> polynomialMapF = GetFinalPolynomialMap(affineT, centralMapG); // Final Polynomial Map and Public Key F
+	std::vector<std::vector<ll>> polynomialMapF = GetFinalPolynomialMap(affineT, centralMapG, q); // Final Polynomial Map and Public Key F
 
 	// Save to publicKey
+	std::cout << "Saving Public Key...\n";
 	PublicKey publicKey;
 	publicKey.F = polynomialMapF;
 
+	std::ofstream publicKeyFile ("PublicKey.txt");
+	for(ll i = 0; i < publicKey.F.size(); ++i) {
+		for(ll j = 0; j < publicKey.F[i].size(); ++j) {
+			publicKeyFile << publicKey.F[i][j] << " ";
+		}
+		publicKeyFile << "\n";
+	}
+
 	// Save to privateKey
+	std::cout << "Saving Private Key...\n";
 	PrivateKey privateKey;
 	privateKey.phi = phiCoefficients;
 	privateKey.psi = psiCoefficients;
 	privateKey.r = rValues;
 	privateKey.T = affineT;
+	privateKey.q = q;
+
+	std::ofstream privateKeyFile ("PrivateKey.txt");
+	for(ll i = 0; i < privateKey.phi.size(); ++i) {
+		for(ll j = 0; j < privateKey.phi[i].size(); ++j) {
+			privateKeyFile << privateKey.phi[i][j] << " ";
+		}
+		privateKeyFile << "\n";
+	}
+	privateKeyFile << "\n";
+	for(ll i = 0; i < privateKey.psi.size(); ++i) {
+		for(ll j = 0; j < privateKey.psi[i].size(); ++j) {
+			privateKeyFile << privateKey.psi[i][j] << " ";
+		}
+		privateKeyFile << "\n";
+	}
+	privateKeyFile << "\n";
+	for(ll i = 0; i < privateKey.r.size(); ++i) {
+		privateKeyFile << privateKey.r[i] << " ";
+	}
+	privateKeyFile << "\n\n";
+	for(ll i = 0; i < privateKey.T.size(); ++i) {
+		for(ll j = 0; j < privateKey.T[i].size(); ++j) {
+			privateKeyFile << privateKey.T[i][j] << " ";
+		}
+		privateKeyFile << "\n";
+	}
+	privateKeyFile << "\n" << privateKey.q << "\n";
 
 	return std::make_pair(publicKey, privateKey);
+}
+
+// Encrypting the Input Message Using the Public Key
+std::vector<ll> EncryptMessage(PublicKey publicKey, std::vector<ll> message, ll degree) {
+	std::vector<ll> cipherText = ComputePolynomialSystemOutput(publicKey.F, message, degree);
+	return cipherText;
+}
+
+// Decrypting the Cipher Text Using the Private Key
+std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherText, ll degree) {
+	std::vector<ll> decyptedMessage;
+	// TODO
+	return decyptedMessage;
 }
 
 int main() {
@@ -302,8 +361,11 @@ int main() {
 	ll degree = DEGREE; // Maximum Degree of the Monomials in the Polynomial System
 	std::cin >> n >> l >> lg;
 
-	// Generating Public Private Key Pair
-	std::cout << "Generating Key Pair...\n";
+	/**
+	 * ################################## Generating Public Private Key Pair ##################################
+	 */
+
+	std::cout << "\nGenerating Key Pair...\n";
 	auto startTime = std::chrono::high_resolution_clock::now();
 	
 	std::pair<PublicKey, PrivateKey> keyPair = GenerateKeyPair(n, l, lg, degree);
@@ -313,16 +375,49 @@ int main() {
 	auto stopTime = std::chrono::high_resolution_clock::now();
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
 	double execTime = duration.count() / 1000.0;
-	std::cout << "Time taken to generate Key Pair = " << execTime << "s\n";
+	std::cout << "Time taken to generate Key Pair = " << execTime << "s\n\n";
 
-	std::cout << "Enter Input to Encrypt (Enter " << n << " numbers in the range [" << std::floor(-l / 2.0) + 1 << ", " << std::floor(l / 2.0) << "]):\n";
-	ll msg[n]; // Input to Encrypt
+	/**
+	 * ################################## Encrypting the Message using the Public Key ##################################
+	 */
+
+	std::cout << "Enter Message to Encrypt (Enter " << n << " numbers in the range [" << std::floor(-l / 2.0) + 1 << ", " << std::floor(l / 2.0) << "]):\n";
+	std::vector<ll> message(n); // Input to Encrypt
 	for(ll i = 0; i < n; ++i) {
-		std::cin >> msg[i];
+		std::cin >> message[i];
 	}
 
-	// TODO
-	// std::cout << NumberOfMonomials(n, 2) << "\n";
+	std::cout << "\nEncrypting Input Message...\n";
+	startTime = std::chrono::high_resolution_clock::now();
+	
+	std::vector<ll> cipherText = EncryptMessage(publicKey, message, degree);
+	for(ll i = 0; i < cipherText.size(); ++i) {
+		std::cout << cipherText[i] << " ";
+	}
+	std::cout << "\n";
+
+	stopTime = std::chrono::high_resolution_clock::now();
+	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
+	execTime = duration.count() / 1000.0;
+	std::cout << "Time taken to Encrypt Message = " << execTime << "s\n\n";
+
+	/**
+	 * ################################## Decrypting the Cipher Text using the Private Key ##################################
+	 */
+
+	std::cout << "Decrypting Cipher Text...\n";
+	startTime = std::chrono::high_resolution_clock::now();
+	
+	std::vector<ll> decryptedMessage = DecryptCipherText(privateKey, cipherText, degree);
+	for(ll i = 0; i < decryptedMessage.size(); ++i) {
+		std::cout << decryptedMessage[i] << " ";
+	}
+	std::cout << "\n";
+
+	stopTime = std::chrono::high_resolution_clock::now();
+	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
+	execTime = duration.count() / 1000.0;
+	std::cout << "Time taken to Encrypt Message = " << execTime << "s\n";
 
 	return 0;
 }
