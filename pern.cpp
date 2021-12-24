@@ -262,87 +262,88 @@ std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> 
 	return polynomialMapF;
 }
 
+// Returns the GCD and Coefficients of GCD(a, b)
+std::tuple<ll, ll, ll> ExtendedEuclideanGCD(ll a, ll b) {
+	std::tuple<ll, ll, ll> coefficients;
+	if(b == 0) {
+		coefficients = std::make_tuple(a, 1, 0);
+	} else {
+		ll x; // Coefficient of a
+		ll y; // Coefficient of b
+		ll gcd; // GCD of a and b
+		std::tie(gcd, x, y) = ExtendedEuclideanGCD(b, Modulo(a, b));
+		coefficients = std::make_tuple(gcd, y, x - y * (a / b));
+	}
+	return coefficients;
+}
+
+// Computes the Positive Multiplicative Inverse of b over a
+ll MultiplicativeInverse(ll a, ll b) {
+	ll inverse = 0;
+	std::tie(std::ignore, std::ignore, inverse) = ExtendedEuclideanGCD(a, b); // Only get the coefficient of b
+	inverse = Modulo(inverse, a); // Convert negative coefficients to positive ones
+	return inverse;
+}
+
 // Invert a Square Matrix in the Integer Field Fq
 std::vector<std::vector<ll>> MatrixInvert(std::vector<std::vector<ll>> mat, ll q) {
 	
-	std::vector<std::vector<ll>> inverseMat(mat.size(), std::vector<ll>(mat[0].size(), 0));
-	
-	// Initializing the Augmented Matrix as an Identity Matrix
-	std::vector<std::vector<ll>> augmentedMat(mat.size(), std::vector<ll>(mat[0].size(), 0));
+	// Initializing the Augmented Matrix
+	std::vector<std::vector<ll>> augmentedMat;
+	for(ll i = 0; i < mat.size(); ++i) {
+		std::vector<ll> row(2 * mat[i].size());
+		for(ll j = 0; j < mat[i].size(); ++j) {
+			row[j] = mat[i][j];
+			row[j + mat[i].size()] = i == j ? 1 : 0;
+		}
+		augmentedMat.push_back(row);
+	}
+
+	// Running Gaussian Elimination Algorithm to obtain the Inverse
 	for(ll i = 0; i < augmentedMat.size(); ++i) {
-		augmentedMat[i][i] = 1;
+
+		ll inv = MultiplicativeInverse(q, augmentedMat[i][i]);
+		for(ll j = 0; j < augmentedMat[i].size(); ++j) {
+			augmentedMat[i][j] = Modulo(augmentedMat[i][j] * inv, q);
+		}
+
+		for(ll j = 0; j < augmentedMat.size(); ++j) {
+			if(j == i) continue; // Skip the current row
+			ll scale = Modulo(0 - augmentedMat[j][i], q);
+			for(ll k = 0; k < augmentedMat[j].size(); ++k) {
+				augmentedMat[j][k] = Modulo(augmentedMat[j][k] + scale * augmentedMat[i][k], q);
+			}
+		}
+	}
+
+	// Extracting the Inverse from the Augmented Matrix
+	std::vector<std::vector<ll>> inverseMat;
+	for(ll i = 0; i < augmentedMat.size(); ++i) {
+		std::vector<ll> row;
+		for(ll j = augmentedMat[i].size() / 2; j < augmentedMat[i].size(); ++j) {
+			row.push_back(augmentedMat[i][j + inverseMat[i].size()]);
+		}
+		inverseMat.push_back(row);
 	}
 	
 	return inverseMat;
-	// double** augarr = new double* [n];
-	// for(int i = 0; i < n; ++i) {
-	// 	augarr[i] = new double [2 * n];
-	// }
-	// for(int i = 0; i < n; ++i) {
-	// 	for(int j = 0; j < 2 * n; ++j) {
-	// 		if(j < n) augarr[i][j] = arr[i][j];
-	// 		else if(j - n == i) augarr[i][j] = 1.0;
-	// 		else augarr[i][j] = 0.0;
-	// 	}
-	// }
-	// for(int i = 0; i < n; ++i) {
-	// 	double temp = augarr[i][i];
-	// 	for(int j = 0; j < n; ++j) {
-	// 		augarr[i][j] /= temp;
-	// 		augarr[i][j + n] /= temp;
-	// 	}
-	// 	for(int j = i + 1; j < n; ++j) {
-	// 		temp = augarr[j][i];
-	// 		for(int k = 0; k < n; ++k) {
-	// 			augarr[j][k] -= augarr[i][k] * temp;
-	// 			augarr[j][k + n] -= augarr[i][k + n] * temp;
-	// 		}
-	// 	}
-	// }
-	// for(int i = n - 1; i >= 0; --i) {
-	// 	double temp = augarr[i][i];
-	// 	for(int j = n - 1; j >= 0; --j) {
-	// 		augarr[i][j] /= temp;
-	// 		augarr[i][j + n] /= temp;
-	// 	}
-	// 	for(int j = i - 1; j >= 0; --j) {
-	// 		temp = augarr[j][i];
-	// 		for(int k = n - 1; k >= 0; --k) {
-	// 			augarr[j][k] -= augarr[i][k] * temp;
-	// 			augarr[j][k + n] -= augarr[i][k + n] * temp;
-	// 		}
-	// 	}
-	// }
-	// for(int i = 0; i < n; ++i) {
-	// 	for(int j = 0; j < 2 * n; ++j) {
-	// 		if(j >= n) inv[i][j - n] = augarr[i][j];
-	// 	}
-	// }
 }
 
 // Generate Public Private Key Pair
 std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	
-	// std::cout << "Generating Phi...\n";
 	std::vector<std::vector<ll>> phiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Phi Polynomial System
-	// std::cout << "Generating Psi...\n";
 	std::vector<std::vector<ll>> psiCoefficients = GenerateCoefficients(n, n, degree, lg); // Coefficients for the Psi Polynomial System
 	
-	// std::cout << "Getting max of Phi...\n";
 	ll mPhi = GetMaxInCodomain(phiCoefficients, n, degree, l); // Largest Value in Codomain of Phi
-	// std::cout << "Getting max of Psi...\n";
 	ll mPsi = GetMaxInCodomain(psiCoefficients, n, degree, l); // Largest Value in Codomain of Psi
 	
-	// std::cout << "Generating R values...\n";
 	std::pair<ll, std::vector<ll>> result = GetRValues(n, mPhi, mPsi); // r Values and Prime q
 	ll q = result.first; // Large Prime q
 	std::vector<ll> rValues = result.second; // r Values
-	// std::cout << "Prime q = " << q << "\n";
 
-	// std::cout << "Generating Central Map G...\n";
 	std::vector<std::vector<ll>> centralMapG = GetCentralMap(phiCoefficients, psiCoefficients, rValues, q, n); // The Central Map G
 	
-	// std::cout << "Generating Affine Transformation T...\n";
 	std::vector<std::vector<ll>> affineT = GetAffineTransformation(n, q); // Random Affine Transformation T
 
 	std::vector<std::vector<ll>> polynomialMapF = GetFinalPolynomialMap(affineT, centralMapG, q); // Final Polynomial Map and Public Key F
@@ -412,7 +413,13 @@ std::vector<ll> EncryptMessage(PublicKey publicKey, std::vector<ll> message, ll 
 
 // Decrypting the Cipher Text Using the Private Key
 std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherText, ll degree) {
+	
 	std::vector<ll> decyptedMessage;
+
+	// Computing T^-1(c)
+	std::vector<std::vector<ll>> inverseT = MatrixInvert(privateKey.T, privateKey.q);
+	std::vector<ll> inverseCipherText = ComputePolynomialSystemOutput(inverseT, cipherText, degree);
+	
 	// TODO
 	return decyptedMessage;
 }
