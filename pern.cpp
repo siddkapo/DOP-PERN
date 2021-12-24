@@ -19,9 +19,6 @@ typedef struct PrivateKey {
 	ll q;
 } PrivateKey;
 
-// PublicKey publicKey; // Public Key
-// PrivateKey privateKey; // Private Key
-
 // std::srand((unsigned) std::time(NULL)); // Setting a New Seed Value on Every Run
 
 // Output in range [0, b - 1]
@@ -204,6 +201,7 @@ std::pair<ll, std::vector<ll>> GetRValues(ll n, ll mPhi, ll mPsi) {
 
 // Returns the Central Map G = (phi + r * psi) mod q
 std::vector<std::vector<ll>> GetCentralMap(std::vector<std::vector<ll>> phiCoefficients, std::vector<std::vector<ll>> psiCoefficients, std::vector<ll> rValues, ll q, ll n) {
+
 	std::vector<std::vector<ll>> centralMap;
 	ll numMonomials = phiCoefficients[0].size(); // Both phi and psi have Same Number of Monomials
 	for(ll i = 0; i < n; ++i) {
@@ -229,6 +227,7 @@ std::vector<std::vector<ll>> GetAffineTransformation(ll n, ll q) {
 
 // Multiply 2 Matrices of Any Dimensions
 std::vector<std::vector<ll>> MatrixMultiplication(std::vector<std::vector<ll>> matA, std::vector<std::vector<ll>> matB) {
+
 	std::vector<std::vector<ll>> productMat;
 	if(matA[0].size() != matB.size()) {
 		std::cout << "ERROR : Matrix dimensions do not match for multiplication.\n";
@@ -329,6 +328,61 @@ std::vector<std::vector<ll>> MatrixInvert(std::vector<std::vector<ll>> mat, ll q
 	return inverseMat;
 }
 
+// Write Public Key to File
+void WritePublicKeyToFile(PublicKey publicKey, std::string filename) {
+
+	std::ofstream publicKeyFile ("PublicKey.txt");
+	
+	for(ll i = 0; i < publicKey.F.size(); ++i) {
+		for(ll j = 0; j < publicKey.F[i].size(); ++j) {
+			publicKeyFile << publicKey.F[i][j] << " ";
+		}
+		publicKeyFile << "\n";
+	}
+	
+	publicKeyFile << "\n" << publicKey.q << "\n";
+	
+	return;
+}
+
+// Write Private Key to File
+void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
+	
+	std::ofstream privateKeyFile (filename);
+	
+	for(ll i = 0; i < privateKey.phi.size(); ++i) {
+		for(ll j = 0; j < privateKey.phi[i].size(); ++j) {
+			privateKeyFile << privateKey.phi[i][j] << " ";
+		}
+		privateKeyFile << "\n";
+	}
+	privateKeyFile << "\n";
+	
+	for(ll i = 0; i < privateKey.psi.size(); ++i) {
+		for(ll j = 0; j < privateKey.psi[i].size(); ++j) {
+			privateKeyFile << privateKey.psi[i][j] << " ";
+		}
+		privateKeyFile << "\n";
+	}
+	privateKeyFile << "\n";
+	
+	for(ll i = 0; i < privateKey.r.size(); ++i) {
+		privateKeyFile << privateKey.r[i] << " ";
+	}
+	privateKeyFile << "\n\n";
+	
+	for(ll i = 0; i < privateKey.T.size(); ++i) {
+		for(ll j = 0; j < privateKey.T[i].size(); ++j) {
+			privateKeyFile << privateKey.T[i][j] << " ";
+		}
+		privateKeyFile << "\n";
+	}
+	
+	privateKeyFile << "\n" << privateKey.q << "\n";
+	
+	return;
+}
+
 // Generate Public Private Key Pair
 std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	
@@ -353,15 +407,7 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	PublicKey publicKey;
 	publicKey.F = polynomialMapF;
 	publicKey.q = q;
-
-	std::ofstream publicKeyFile ("PublicKey.txt");
-	for(ll i = 0; i < publicKey.F.size(); ++i) {
-		for(ll j = 0; j < publicKey.F[i].size(); ++j) {
-			publicKeyFile << publicKey.F[i][j] << " ";
-		}
-		publicKeyFile << "\n";
-	}
-	publicKeyFile << "\n" << publicKey.q << "\n";
+	WritePublicKeyToFile(publicKey, "PublicKey.txt");
 
 	// Save to privateKey
 	std::cout << "Saving Private Key...\n";
@@ -371,33 +417,7 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	privateKey.r = rValues;
 	privateKey.T = affineT;
 	privateKey.q = q;
-
-	std::ofstream privateKeyFile ("PrivateKey.txt");
-	for(ll i = 0; i < privateKey.phi.size(); ++i) {
-		for(ll j = 0; j < privateKey.phi[i].size(); ++j) {
-			privateKeyFile << privateKey.phi[i][j] << " ";
-		}
-		privateKeyFile << "\n";
-	}
-	privateKeyFile << "\n";
-	for(ll i = 0; i < privateKey.psi.size(); ++i) {
-		for(ll j = 0; j < privateKey.psi[i].size(); ++j) {
-			privateKeyFile << privateKey.psi[i][j] << " ";
-		}
-		privateKeyFile << "\n";
-	}
-	privateKeyFile << "\n";
-	for(ll i = 0; i < privateKey.r.size(); ++i) {
-		privateKeyFile << privateKey.r[i] << " ";
-	}
-	privateKeyFile << "\n\n";
-	for(ll i = 0; i < privateKey.T.size(); ++i) {
-		for(ll j = 0; j < privateKey.T[i].size(); ++j) {
-			privateKeyFile << privateKey.T[i][j] << " ";
-		}
-		privateKeyFile << "\n";
-	}
-	privateKeyFile << "\n" << privateKey.q << "\n";
+	WritePrivateKeyToFile(privateKey, "PrivateKey.txt");
 
 	return std::make_pair(publicKey, privateKey);
 }
