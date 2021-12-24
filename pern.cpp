@@ -3,10 +3,12 @@
 #include <fstream>
 
 #define ll long long int
+#define lld long long double
 #define DEGREE 2
 
 typedef struct PublicKey {
 	std::vector<std::vector<ll>> F;
+	ll q;
 } PublicKey;
 
 typedef struct PrivateKey {
@@ -260,6 +262,64 @@ std::vector<std::vector<ll>> GetFinalPolynomialMap(std::vector<std::vector<ll>> 
 	return polynomialMapF;
 }
 
+// Invert a Square Matrix in the Integer Field Fq
+std::vector<std::vector<ll>> MatrixInvert(std::vector<std::vector<ll>> mat, ll q) {
+	
+	std::vector<std::vector<ll>> inverseMat(mat.size(), std::vector<ll>(mat[0].size(), 0));
+	
+	// Initializing the Augmented Matrix as an Identity Matrix
+	std::vector<std::vector<ll>> augmentedMat(mat.size(), std::vector<ll>(mat[0].size(), 0));
+	for(ll i = 0; i < augmentedMat.size(); ++i) {
+		augmentedMat[i][i] = 1;
+	}
+	
+	return inverseMat;
+	// double** augarr = new double* [n];
+	// for(int i = 0; i < n; ++i) {
+	// 	augarr[i] = new double [2 * n];
+	// }
+	// for(int i = 0; i < n; ++i) {
+	// 	for(int j = 0; j < 2 * n; ++j) {
+	// 		if(j < n) augarr[i][j] = arr[i][j];
+	// 		else if(j - n == i) augarr[i][j] = 1.0;
+	// 		else augarr[i][j] = 0.0;
+	// 	}
+	// }
+	// for(int i = 0; i < n; ++i) {
+	// 	double temp = augarr[i][i];
+	// 	for(int j = 0; j < n; ++j) {
+	// 		augarr[i][j] /= temp;
+	// 		augarr[i][j + n] /= temp;
+	// 	}
+	// 	for(int j = i + 1; j < n; ++j) {
+	// 		temp = augarr[j][i];
+	// 		for(int k = 0; k < n; ++k) {
+	// 			augarr[j][k] -= augarr[i][k] * temp;
+	// 			augarr[j][k + n] -= augarr[i][k + n] * temp;
+	// 		}
+	// 	}
+	// }
+	// for(int i = n - 1; i >= 0; --i) {
+	// 	double temp = augarr[i][i];
+	// 	for(int j = n - 1; j >= 0; --j) {
+	// 		augarr[i][j] /= temp;
+	// 		augarr[i][j + n] /= temp;
+	// 	}
+	// 	for(int j = i - 1; j >= 0; --j) {
+	// 		temp = augarr[j][i];
+	// 		for(int k = n - 1; k >= 0; --k) {
+	// 			augarr[j][k] -= augarr[i][k] * temp;
+	// 			augarr[j][k + n] -= augarr[i][k + n] * temp;
+	// 		}
+	// 	}
+	// }
+	// for(int i = 0; i < n; ++i) {
+	// 	for(int j = 0; j < 2 * n; ++j) {
+	// 		if(j >= n) inv[i][j - n] = augarr[i][j];
+	// 	}
+	// }
+}
+
 // Generate Public Private Key Pair
 std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	
@@ -291,6 +351,7 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	std::cout << "Saving Public Key...\n";
 	PublicKey publicKey;
 	publicKey.F = polynomialMapF;
+	publicKey.q = q;
 
 	std::ofstream publicKeyFile ("PublicKey.txt");
 	for(ll i = 0; i < publicKey.F.size(); ++i) {
@@ -299,6 +360,7 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 		}
 		publicKeyFile << "\n";
 	}
+	publicKeyFile << "\n" << publicKey.q << "\n";
 
 	// Save to privateKey
 	std::cout << "Saving Private Key...\n";
@@ -342,6 +404,9 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 // Encrypting the Input Message Using the Public Key
 std::vector<ll> EncryptMessage(PublicKey publicKey, std::vector<ll> message, ll degree) {
 	std::vector<ll> cipherText = ComputePolynomialSystemOutput(publicKey.F, message, degree);
+	for(ll i = 0; i < cipherText.size(); ++i) {
+		cipherText[i] = Modulo(cipherText[i], publicKey.q);
+	}
 	return cipherText;
 }
 
