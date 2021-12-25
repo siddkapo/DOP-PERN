@@ -13,7 +13,9 @@ typedef struct PublicKey {
 
 typedef struct PrivateKey {
 	std::vector<std::vector<ll>> phi;
+	ll mPhi;
 	std::vector<std::vector<ll>> psi;
+	ll mPsi;
 	std::vector<ll> r;
 	std::vector<std::vector<ll>> T;
 	ll q;
@@ -186,7 +188,7 @@ std::vector<ll> ComputeRValues(ll n, ll q, ll mPhi, ll mPsi) {
 }
 
 // Returns the r Values and Prime q by Automatically Updating the Prime q
-std::pair<ll, std::vector<ll>> GetRValues(ll n, ll mPhi, ll mPsi) {
+std::tuple<ll, std::vector<ll>> GetRValues(ll n, ll mPhi, ll mPsi) {
 	ll base = 4 * mPhi * mPsi; // Prime q > 4 * mPhi * mPsi
 	ll q; // Large Prime Number
 	std::vector<ll> rValues; // List of the r Values;
@@ -196,7 +198,7 @@ std::pair<ll, std::vector<ll>> GetRValues(ll n, ll mPhi, ll mPsi) {
 		rValues = ComputeRValues(n, q, mPhi, mPsi);
 		base = q;
 	}
-	return std::make_pair(q, rValues);
+	return std::make_tuple(q, rValues);
 }
 
 // Returns the Central Map G = (phi + r * psi) mod q
@@ -320,12 +322,40 @@ std::vector<std::vector<ll>> MatrixInvert(std::vector<std::vector<ll>> mat, ll q
 	for(ll i = 0; i < augmentedMat.size(); ++i) {
 		std::vector<ll> row;
 		for(ll j = augmentedMat[i].size() / 2; j < augmentedMat[i].size(); ++j) {
-			row.push_back(augmentedMat[i][j + inverseMat[i].size()]);
+			row.push_back(augmentedMat[i][j]);
 		}
 		inverseMat.push_back(row);
 	}
 	
 	return inverseMat;
+}
+
+// Convert a 1 x n Matrix into an n x 1 Vector
+std::vector<std::vector<ll>> Vectorize(std::vector<ll> matA) {
+	std::vector<std::vector<ll>> vecA;
+	for(ll i = 0; i < matA.size(); ++i) {
+		std::vector<ll> element = {matA[i]};
+		vecA.push_back(element);
+	}
+	return vecA;
+}
+
+// Convert an n x 1 Vector into a 1 x n Matrix
+std::vector<ll> DeVectorize(std::vector<std::vector<ll>> vecA) {
+	std::vector<ll> matA;
+	for(ll i = 0; i < vecA.size(); ++i) {
+		matA.push_back(vecA[i][0]);
+	}
+	return matA;
+}
+
+// Compute the a Values (RHS of Phi(x)) and the b Values (RHS of Psi(x))
+std::tuple<std::vector<ll>, std::vector<ll>> GetABValues(PrivateKey privateKey, std::vector<ll> inverseCipherText) {
+	std::vector<ll> aValues;
+	std::vector<ll> bValues;
+	
+	// TODO
+	return std::make_tuple(aValues, bValues);
 }
 
 // Write Public Key to File
@@ -356,7 +386,8 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 		}
 		privateKeyFile << "\n";
 	}
-	privateKeyFile << "\n";
+
+	privateKeyFile << "\n" << privateKey.mPhi << "\n\n";
 	
 	for(ll i = 0; i < privateKey.psi.size(); ++i) {
 		for(ll j = 0; j < privateKey.psi[i].size(); ++j) {
@@ -364,7 +395,8 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 		}
 		privateKeyFile << "\n";
 	}
-	privateKeyFile << "\n";
+	
+	privateKeyFile << "\n" << privateKey.mPsi << "\n\n";
 	
 	for(ll i = 0; i < privateKey.r.size(); ++i) {
 		privateKeyFile << privateKey.r[i] << " ";
@@ -392,9 +424,9 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	ll mPhi = GetMaxInCodomain(phiCoefficients, n, degree, l); // Largest Value in Codomain of Phi
 	ll mPsi = GetMaxInCodomain(psiCoefficients, n, degree, l); // Largest Value in Codomain of Psi
 	
-	std::pair<ll, std::vector<ll>> result = GetRValues(n, mPhi, mPsi); // r Values and Prime q
-	ll q = result.first; // Large Prime q
-	std::vector<ll> rValues = result.second; // r Values
+	ll q; // Large Prime q
+	std::vector<ll> rValues; // r Values
+	std::tie(q, rValues) = GetRValues(n, mPhi, mPsi); // r Values and Prime q
 
 	std::vector<std::vector<ll>> centralMapG = GetCentralMap(phiCoefficients, psiCoefficients, rValues, q, n); // The Central Map G
 	
@@ -413,7 +445,9 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	std::cout << "Saving Private Key...\n";
 	PrivateKey privateKey;
 	privateKey.phi = phiCoefficients;
+	privateKey.mPhi = mPhi;
 	privateKey.psi = psiCoefficients;
+	privateKey.mPsi = mPsi;
 	privateKey.r = rValues;
 	privateKey.T = affineT;
 	privateKey.q = q;
@@ -438,8 +472,11 @@ std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherT
 
 	// Computing T^-1(c)
 	std::vector<std::vector<ll>> inverseT = MatrixInvert(privateKey.T, privateKey.q);
-	std::vector<ll> inverseCipherText = ComputePolynomialSystemOutput(inverseT, cipherText, degree);
+	std::vector<ll> inverseCipherText = DeVectorize(MatrixMultiplication(inverseT, Vectorize(cipherText))); // ComputePolynomialSystemOutput() not used as T is a system of linear polynomials
 	
+	std::vector<ll> aValues;
+	std::vector<ll> bValues;
+	std::tie(aValues, bValues) = GetABValues(privateKey, inverseCipherText); // Get the RHS of Phi(x) and Psi(x)
 	// TODO
 	return decyptedMessage;
 }
