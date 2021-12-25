@@ -12,6 +12,8 @@ typedef struct PublicKey {
 } PublicKey;
 
 typedef struct PrivateKey {
+	ll l;
+	ll lg;
 	std::vector<std::vector<ll>> phi;
 	ll mPhi;
 	std::vector<std::vector<ll>> psi;
@@ -353,9 +355,27 @@ std::vector<ll> DeVectorize(std::vector<std::vector<ll>> vecA) {
 std::tuple<std::vector<ll>, std::vector<ll>> GetABValues(PrivateKey privateKey, std::vector<ll> inverseCipherText) {
 	std::vector<ll> aValues;
 	std::vector<ll> bValues;
-	
-	// TODO
+	for(ll i = 0; i < privateKey.r.size(); ++i) {
+		for(ll b = 0; b <= privateKey.mPsi; ++b) {
+			if(std::abs(LeastAbsoluteRemainder(inverseCipherText[i] - b * privateKey.r[i], privateKey.q)) < privateKey.mPhi) {
+				bValues.push_back(b);
+				aValues.push_back(LeastAbsoluteRemainder(inverseCipherText[i] - b * privateKey.r[i], privateKey.q));
+				break;
+			} else if(std::abs(LeastAbsoluteRemainder(inverseCipherText[i] + b * privateKey.r[i], privateKey.q)) < privateKey.mPhi) {
+				bValues.push_back(0 - b);
+				aValues.push_back(LeastAbsoluteRemainder(inverseCipherText[i] + b * privateKey.r[i], privateKey.q));
+				break;
+			}
+		}
+	}
 	return std::make_tuple(aValues, bValues);
+}
+
+// Solve the Non Linear Polynomial Equation System using the Levenberg-Marquardt Method
+std::vector<ll> SolveNonLinearEquationSystem(PrivateKey privateKey, std::vector<ll> aValues, std::vector<ll> bValues, ll degree) {
+	std::vector<ll> decryptedMessage;
+	// TODO
+	return decryptedMessage;
 }
 
 // Write Public Key to File
@@ -363,6 +383,7 @@ void WritePublicKeyToFile(PublicKey publicKey, std::string filename) {
 
 	std::ofstream publicKeyFile ("PublicKey.txt");
 	
+	publicKeyFile << "F:\n";
 	for(ll i = 0; i < publicKey.F.size(); ++i) {
 		for(ll j = 0; j < publicKey.F[i].size(); ++j) {
 			publicKeyFile << publicKey.F[i][j] << " ";
@@ -370,7 +391,7 @@ void WritePublicKeyToFile(PublicKey publicKey, std::string filename) {
 		publicKeyFile << "\n";
 	}
 	
-	publicKeyFile << "\n" << publicKey.q << "\n";
+	publicKeyFile << "\nq:\n" << publicKey.q << "\n";
 	
 	return;
 }
@@ -379,7 +400,12 @@ void WritePublicKeyToFile(PublicKey publicKey, std::string filename) {
 void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 	
 	std::ofstream privateKeyFile (filename);
+
+	privateKeyFile << "l:\n" << privateKey.l << "\n\n";
+
+	privateKeyFile << "lg:\n" << privateKey.lg << "\n\n";
 	
+	privateKeyFile << "Phi\n";
 	for(ll i = 0; i < privateKey.phi.size(); ++i) {
 		for(ll j = 0; j < privateKey.phi[i].size(); ++j) {
 			privateKeyFile << privateKey.phi[i][j] << " ";
@@ -387,8 +413,9 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 		privateKeyFile << "\n";
 	}
 
-	privateKeyFile << "\n" << privateKey.mPhi << "\n\n";
+	privateKeyFile << "\nMPhi:\n" << privateKey.mPhi << "\n\n";
 	
+	privateKeyFile << "Psi\n";
 	for(ll i = 0; i < privateKey.psi.size(); ++i) {
 		for(ll j = 0; j < privateKey.psi[i].size(); ++j) {
 			privateKeyFile << privateKey.psi[i][j] << " ";
@@ -396,13 +423,14 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 		privateKeyFile << "\n";
 	}
 	
-	privateKeyFile << "\n" << privateKey.mPsi << "\n\n";
+	privateKeyFile << "\nMPsi:\n" << privateKey.mPsi << "\n\n";
 	
 	for(ll i = 0; i < privateKey.r.size(); ++i) {
 		privateKeyFile << privateKey.r[i] << " ";
 	}
 	privateKeyFile << "\n\n";
 	
+	privateKeyFile << "T:\n";
 	for(ll i = 0; i < privateKey.T.size(); ++i) {
 		for(ll j = 0; j < privateKey.T[i].size(); ++j) {
 			privateKeyFile << privateKey.T[i][j] << " ";
@@ -410,7 +438,7 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 		privateKeyFile << "\n";
 	}
 	
-	privateKeyFile << "\n" << privateKey.q << "\n";
+	privateKeyFile << "\nq:\n" << privateKey.q << "\n";
 	
 	return;
 }
@@ -444,6 +472,8 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	// Save to privateKey
 	std::cout << "Saving Private Key...\n";
 	PrivateKey privateKey;
+	privateKey.l = l;
+	privateKey.lg = lg;
 	privateKey.phi = phiCoefficients;
 	privateKey.mPhi = mPhi;
 	privateKey.psi = psiCoefficients;
@@ -468,16 +498,38 @@ std::vector<ll> EncryptMessage(PublicKey publicKey, std::vector<ll> message, ll 
 // Decrypting the Cipher Text Using the Private Key
 std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherText, ll degree) {
 	
-	std::vector<ll> decyptedMessage;
-
 	// Computing T^-1(c)
 	std::vector<std::vector<ll>> inverseT = MatrixInvert(privateKey.T, privateKey.q);
 	std::vector<ll> inverseCipherText = DeVectorize(MatrixMultiplication(inverseT, Vectorize(cipherText))); // ComputePolynomialSystemOutput() not used as T is a system of linear polynomials
 	
+	// Computing the RHS of Phi(x) and Psi(x)
 	std::vector<ll> aValues;
 	std::vector<ll> bValues;
 	std::tie(aValues, bValues) = GetABValues(privateKey, inverseCipherText); // Get the RHS of Phi(x) and Psi(x)
-	// TODO
+
+	// for(ll i = 0; i < inverseT.size(); ++i) {
+	// 	for(ll j = 0; j < inverseT[i].size(); ++j) {
+	// 		std::cout << inverseT[i][j] << " ";
+	// 	}
+	// 	std::cout << "\n";
+	// }
+	// std::cout << "\n";
+	// for(ll i = 0; i < inverseCipherText.size(); ++i) {
+	// 	std::cout << inverseCipherText[i] << " ";
+	// }
+	// std::cout << "\n";
+	// for(ll i = 0; i < aValues.size(); ++i) {
+	// 	std::cout << aValues[i] << " ";
+	// }
+	// std::cout << "\n";
+	// for(ll i = 0; i < bValues.size(); ++i) {
+	// 	std::cout << bValues[i] << " ";
+	// }
+	// std::cout << "\n";
+
+	// Solving the Non Linear Polynomial System using Levenberg-Marquardt Method
+	std::vector<ll> decyptedMessage = SolveNonLinearEquationSystem(privateKey, aValues, bValues, degree);
+
 	return decyptedMessage;
 }
 
@@ -546,7 +598,7 @@ int main() {
 	stopTime = std::chrono::high_resolution_clock::now();
 	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
 	execTime = duration.count() / 1000.0;
-	std::cout << "Time taken to Encrypt Message = " << execTime << "s\n";
+	std::cout << "Time taken to Decrypt Message = " << execTime << "s\n";
 
 	return 0;
 }
