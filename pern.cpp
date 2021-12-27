@@ -3,8 +3,11 @@
 #include <fstream>
 
 #define ll long long int
-#define lld long long double
+#define ld long double
 #define DEGREE 2
+#define ALPHA 0.1
+#define BETA 0.1
+#define GAMMA 0.1
 
 typedef struct PublicKey {
 	std::vector<std::vector<ll>> F;
@@ -12,6 +15,7 @@ typedef struct PublicKey {
 } PublicKey;
 
 typedef struct PrivateKey {
+	ll n;
 	ll l;
 	ll lg;
 	std::vector<std::vector<ll>> phi;
@@ -61,12 +65,23 @@ ll NumberOfMonomials(ll n, ll d) {
 	return num;
 }
 
-// Generate List of Random Numbers in the range [lowLimit, upLimit]
+// Generate List of Random Integers in the range [lowLimit, upLimit]
 std::vector<ll> GenerateRandom(ll n, ll lowLimit, ll upLimit) {
 	std::vector<ll> list;
 	ll range = upLimit - lowLimit + 1;
 	for(ll i = 0; i < n; ++i) {
 		ll random = (std::rand() % range) + lowLimit;
+		list.push_back(random);
+	}
+	return list;
+}
+
+// Generate List of Random Real Numbers in the range [lowLimit, upLimit]
+std::vector<ld> GenerateRandom(ll n, ld lowLimit, ld upLimit) {
+	std::vector<ld> list;
+	ll range = (ll) upLimit - (ll) lowLimit + 1;
+	for(ll i = 0; i < n; ++i) {
+		ld random = (std::rand() % range) + lowLimit + ((ld) std::rand()) / RAND_MAX;
 		list.push_back(random);
 	}
 	return list;
@@ -84,7 +99,7 @@ std::vector<std::vector<ll>> GenerateCoefficients(ll n, ll m, ll d, ll r) {
 	return coefficients;
 }
 
-// Compute the Result of a Single Polynomial on some input x
+// Compute the Result of a Single Polynomial on some input x (Integers)
 ll ComputePolynomialOutput(std::vector<ll> coefficients, std::vector<ll> x, ll degree) {
 	x.push_back(1); // Appending the Constant Term (Degree 0 Term) in the Input --> x = [x1, x2, ..., xn, 1]
 	ll numMonomials = NumberOfMonomials((ll) x.size(), degree);
@@ -99,11 +114,36 @@ ll ComputePolynomialOutput(std::vector<ll> coefficients, std::vector<ll> x, ll d
 	return result;
 }
 
-// Compute the Result of the Polynomial System on some input x
+// Compute the Result of the Polynomial System on some input x (Integers)
 std::vector<ll> ComputePolynomialSystemOutput(std::vector<std::vector<ll>> coefficients, std::vector<ll> x, ll degree) {
 	std::vector<ll> result;
 	for(ll i = 0; i < coefficients.size(); ++i) {
 		ll out = ComputePolynomialOutput(coefficients[i], x, degree);
+		result.push_back(out);
+	}
+	return result;
+}
+
+// Compute the Result of a Single Polynomial on some input x (Real Numbers)
+ld ComputePolynomialOutput(std::vector<ll> coefficients, std::vector<ld> x, ll degree) {
+	x.push_back(1.0); // Appending the Constant Term (Degree 0 Term) in the Input --> x = [x1, x2, ..., xn, 1.0]
+	// ll numMonomials = NumberOfMonomials((ll) x.size(), degree);
+	ld result = 0;
+	// TODO: Re-implement for Generalized Degree
+	// Current Implementation Works only for Degree 2 Polynomials
+	for(ll i = 0, k = 0; i < x.size(); ++i) {
+		for(ll j = i; j < x.size(); ++j, ++k) {
+			result += x[i] * x[j] * coefficients[k];
+		}
+	}
+	return result;
+}
+
+// Compute the Result of the Polynomial System on some input x (Real Numbers)
+std::vector<ld> ComputePolynomialSystemOutput(std::vector<std::vector<ll>> coefficients, std::vector<ld> x, ll degree) {
+	std::vector<ld> result;
+	for(ll i = 0; i < coefficients.size(); ++i) {
+		ld out = ComputePolynomialOutput(coefficients[i], x, degree);
 		result.push_back(out);
 	}
 	return result;
@@ -229,7 +269,7 @@ std::vector<std::vector<ll>> GetAffineTransformation(ll n, ll q) {
 	return affineT;
 }
 
-// Multiply 2 Matrices of Any Dimensions
+// Multiply 2 Matrices of Any Dimensions (Integers)
 std::vector<std::vector<ll>> MatrixMultiplication(std::vector<std::vector<ll>> matA, std::vector<std::vector<ll>> matB) {
 
 	std::vector<std::vector<ll>> productMat;
@@ -240,6 +280,30 @@ std::vector<std::vector<ll>> MatrixMultiplication(std::vector<std::vector<ll>> m
 
 	for(ll i = 0; i < matA.size(); ++i) {
 		std::vector<ll> product;
+		ll tmpProd;
+		for(ll c = 0; c < matB[0].size(); ++c) {
+			tmpProd = 0;
+			for(ll j = 0; j < matA[i].size(); ++j) {
+				tmpProd += matA[i][j] * matB[j][c];
+			}
+			product.push_back(tmpProd);
+		}
+		productMat.push_back(product);
+	}
+	return productMat;
+}
+
+// Multiply 2 Matrices of Any Dimensions (Real Numbers)
+std::vector<std::vector<ld>> MatrixMultiplication(std::vector<std::vector<ld>> matA, std::vector<std::vector<ld>> matB) {
+
+	std::vector<std::vector<ld>> productMat;
+	if(matA[0].size() != matB.size()) {
+		std::cout << "ERROR : Matrix dimensions do not match for multiplication.\n";
+		return productMat;
+	}
+
+	for(ll i = 0; i < matA.size(); ++i) {
+		std::vector<ld> product;
 		ll tmpProd;
 		for(ll c = 0; c < matB[0].size(); ++c) {
 			tmpProd = 0;
@@ -289,7 +353,7 @@ ll MultiplicativeInverse(ll a, ll b) {
 }
 
 // Invert a Square Matrix in the Integer Field Fq
-std::vector<std::vector<ll>> MatrixInvert(std::vector<std::vector<ll>> mat, ll q) {
+std::vector<std::vector<ll>> MatrixInverse(std::vector<std::vector<ll>> mat, ll q) {
 	
 	// Initializing the Augmented Matrix
 	std::vector<std::vector<ll>> augmentedMat;
@@ -332,6 +396,54 @@ std::vector<std::vector<ll>> MatrixInvert(std::vector<std::vector<ll>> mat, ll q
 	return inverseMat;
 }
 
+// Invert a Square Matrix (Real Numbers)
+std::vector<std::vector<ld>> MatrixInverse(std::vector<std::vector<ld>> mat) {
+	
+	// Initializing the Augmented Matrix
+	std::vector<std::vector<ld>> augmentedMat;
+	for(ll i = 0; i < mat.size(); ++i) {
+		std::vector<ld> row(2 * mat[i].size());
+		for(ll j = 0; j < mat[i].size(); ++j) {
+			row[j] = mat[i][j];
+			row[j + mat[i].size()] = i == j ? 1.0 : 0.0;
+		}
+		augmentedMat.push_back(row);
+	}
+
+	// Running Gaussian Elimination Algorithm to obtain the Inverse
+	for(ll i = 0; i < augmentedMat.size(); ++i) {
+
+		// ll inv = MultiplicativeInverse(q, augmentedMat[i][i]);
+		ld inv = 1.0 / augmentedMat[i][i];
+		for(ll j = 0; j < augmentedMat[i].size(); ++j) {
+			// augmentedMat[i][j] = Modulo(augmentedMat[i][j] * inv, q);
+			augmentedMat[i][j] *= inv;
+		}
+
+		for(ll j = 0; j < augmentedMat.size(); ++j) {
+			if(j == i) continue; // Skip the current row
+			// ll scale = Modulo(0 - augmentedMat[j][i], q);
+			ld scale = 0 - augmentedMat[j][i];
+			for(ll k = 0; k < augmentedMat[j].size(); ++k) {
+				// augmentedMat[j][k] = Modulo(augmentedMat[j][k] + scale * augmentedMat[i][k], q);
+				augmentedMat[j][k] += scale * augmentedMat[i][k];
+			}
+		}
+	}
+
+	// Extracting the Inverse from the Augmented Matrix
+	std::vector<std::vector<ld>> inverseMat;
+	for(ll i = 0; i < augmentedMat.size(); ++i) {
+		std::vector<ld> row;
+		for(ll j = augmentedMat[i].size() / 2; j < augmentedMat[i].size(); ++j) {
+			row.push_back(augmentedMat[i][j]);
+		}
+		inverseMat.push_back(row);
+	}
+	
+	return inverseMat;
+}
+
 // Convert a 1 x n Matrix into an n x 1 Vector
 std::vector<std::vector<ll>> Vectorize(std::vector<ll> matA) {
 	std::vector<std::vector<ll>> vecA;
@@ -355,7 +467,7 @@ std::vector<ll> DeVectorize(std::vector<std::vector<ll>> vecA) {
 std::tuple<std::vector<ll>, std::vector<ll>> GetABValues(PrivateKey privateKey, std::vector<ll> inverseCipherText) {
 	std::vector<ll> aValues;
 	std::vector<ll> bValues;
-	for(ll i = 0; i < privateKey.r.size(); ++i) {
+	for(ll i = 0; i < privateKey.n; ++i) {
 		for(ll b = 0; b <= privateKey.mPsi; ++b) {
 			if(std::abs(LeastAbsoluteRemainder(inverseCipherText[i] - b * privateKey.r[i], privateKey.q)) < privateKey.mPhi) {
 				bValues.push_back(b);
@@ -371,10 +483,203 @@ std::tuple<std::vector<ll>, std::vector<ll>> GetABValues(PrivateKey privateKey, 
 	return std::make_tuple(aValues, bValues);
 }
 
+// Computes the Partial Derivatives of a Single Polynomial over All Variables
+std::vector<ld> ComputePartialDerivatives(std::vector<ll> coefficients, std::vector<ld> x, ll degree) {
+	// Only works for Quadratic Polynomial Equations
+	std::vector<ld> xCopy = x;
+	xCopy.push_back(1.0); // Pushing the Constant Term
+
+	std::vector<ld> partialDerivatives;
+	for(ll i = 0; i < x.size(); ++i) { // Only Compute the Partial Derivatives w.r.t. the Variables and not the Constant Term
+		ld result = 0.0;
+		for(ll j = 0, l = 0; j < xCopy.size(); ++j) {
+			for(ll k = 0; k < xCopy.size(); ++k, ++l) {
+				if(j == k) {
+					if(i == j) {
+						result += 2.0 * coefficients[l] * xCopy[j]; // derivative of xj^2 w.r.t. xj
+					} else {
+						result += 0.0; // derivative of xj^2 w.r.t. xi
+					}
+				} else {
+					if(i == j) {
+						result += coefficients[l] * xCopy[k]; // derivative of xj.xk w.r.t. xj
+					} else if(i == k) {
+						result += coefficients[l] * xCopy[j]; // derivative of xj.xk w.r.t. xk
+					} else {
+						result += 0.0; // derivative of xj.xk w.r.t. xi
+					}
+				}
+			}
+		}
+		partialDerivatives.push_back(result);
+	}
+
+	return partialDerivatives;
+}
+
+// Computes the Jacobian of the Polynomial System
+std::vector<std::vector<ld>> ComputeJacobianMatrix(std::vector<std::vector<ll>> function, std::vector<ld> x, ll degree) {
+	std::vector<std::vector<ld>> jacobian;
+	for(ll i = 0; i < function.size(); ++i) {
+		jacobian.push_back(ComputePartialDerivatives(function[i], x, degree));
+	}
+	return jacobian;
+}
+
+// Returns the Transpose of a Matrix
+std::vector<std::vector<ld>> MatrixTranspose(std::vector<std::vector<ld>> mat) {
+	std::vector<std::vector<ld>> transpose;
+	for(ll i = 0; i < mat[0].size(); ++i) {
+		std::vector<ld> row;
+		for(ll j = 0; j < mat.size(); ++j) {
+			row.push_back(mat[j][i]);
+		}
+		transpose.push_back(row);
+	}
+	return transpose;
+}
+
+// Compute Norm of a Vector = 0.5 * (vec[1]^2 + vec[2]^2 + ... + vec[n]^2)
+ld ComputeNorm(std::vector<ld> vec) {
+	ld norm = 0.0;
+	for(ll i = 0; i < vec.size(); ++i) {
+		norm += vec[i] * vec[i];
+	}
+	norm *= 0.5;
+	return norm;
+}
+
+// Returns the Max Absolute Component of a Vector
+ld MaxAbsoluteComponent(std::vector<ld> vec) {
+	ld max = 0.0;
+	for(ll i = 0; i < vec.size(); ++i) {
+		max = std::abs(vec[i]) > max ? std::abs(vec[i]) : max;
+	}
+	return max;
+}
+
 // Solve the Non Linear Polynomial Equation System using the Levenberg-Marquardt Method
 std::vector<ll> SolveNonLinearEquationSystem(PrivateKey privateKey, std::vector<ll> aValues, std::vector<ll> bValues, ll degree) {
+	
+	ld alpha = ALPHA; // Search Parameter
+	ld beta = BETA; // Search Parameter
+	ld gamma = GAMMA; // Search Parameter
+
+	std::vector<std::vector<ll>> h; // H(x) = Concatenation of Phi(x) - aValues and Psi(x) - bValues
+	for(ll i = 0; i < privateKey.phi.size(); ++i) {
+		h.push_back(privateKey.phi[i]);
+		h[i][privateKey.phi[i].size() - 1] -= aValues[i]; // Phi(x) - aValues
+	}
+	for(ll i = 0; i < privateKey.psi.size(); ++i) {
+		h.push_back(privateKey.psi[i]);
+		h[i][privateKey.psi[i].size() - 1] -= bValues[i]; // Psi(x) - bValues
+	}
+
+	/*******************************************/
+	std::vector<ll> message = {-2, -1, 0, 1, 2};
+	std::vector<ll> test = ComputePolynomialSystemOutput(privateKey.phi, message, degree);
+	for(ll i = 0; i < test.size(); ++i) {
+		std::cout << test[i] << " ";
+	}
+	std::cout << "\n";
+	test = ComputePolynomialSystemOutput(privateKey.psi, message, degree);
+	for(ll i = 0; i < test.size(); ++i) {
+		std::cout << test[i] << " ";
+	}
+	std::cout << "\n";
+	test = ComputePolynomialSystemOutput(h, message, degree);
+	for(ll i = 0; i < test.size(); ++i) {
+		std::cout << test[i] << " ";
+	}
+	std::cout << "\n";
+	/*******************************************/
+
 	std::vector<ll> decryptedMessage;
-	// TODO
+
+	bool flag = false;
+	ld lowLimit = - privateKey.l / 2.0;
+	ld upLimit = privateKey.l / 2.0;
+	std::vector<ld> x0;
+	// do {
+	// 	x0.clear();
+	// 	x0 = GenerateRandom(privateKey.n, lowLimit, upLimit); // Initial Random Guess in Range [-l / 2, l / 2]
+	// 	// x0 = {-2.0, -1.0, 0.0, 1.0, 2.0};
+	// 	std::cout << "Initial Random Guess:\n";
+	// 	for(ll i = 0; i < x0.size(); ++i) {
+	// 		std::cout << x0[i] << " ";
+	// 	}
+	// 	std::cout << "\n";
+	// 	std::vector<std::vector<ld>> hResult = {ComputePolynomialSystemOutput(h, x0, degree)}; // Computing h(x0) : (1 x 2n)
+	// 	std::cout << "Initial H(x0) Guess:\n";
+	// 	for(ll i = 0; i < hResult[0].size(); ++i) {
+	// 		std::cout << hResult[0][i] << " ";
+	// 	}
+	// 	std::cout << "\n";
+	// 	std::vector<std::vector<ld>> hJacobian = ComputeJacobianMatrix(h, x0, degree); // Computing Jacobian of h(x) at x0 : (2n x n)
+	// 	std::vector<std::vector<ld>> negativeIdentityMatrix = {{-1.0}}; // Negative Identity Matrix : (1 x 1)
+
+	// 	std::vector<std::vector<ld>> e = MatrixMultiplication(MatrixMultiplication(negativeIdentityMatrix, hResult), hJacobian); // e = -h(x0) * Jh(x0) : (1 x n)
+	// 	std::vector<std::vector<ld>> s = MatrixMultiplication(MatrixTranspose(hJacobian), hJacobian); // s = Jh(x0)^T * Jh(x0) : (n x n)
+	// 	std::vector<std::vector<ld>> d0 = MatrixMultiplication(e, MatrixInverse(s)); // d0 * s = e : (1 x n)
+	// 	std::vector<std::vector<ld>> ed0Product = MatrixMultiplication(e, MatrixTranspose(d0)); // e * d0^T : (1 x 1)
+
+	// 	ld t0 = 0.0; // Step Size
+	// 	std::vector<ld> x1; // x1 = x0 + t0 * d0
+	// 	std::vector<std::vector<ld>> hResultNew; // h(x1)
+	// 	ld thetaOldX = ComputeNorm(hResult[0]); // theta(x0) = Norm of h(x0)
+	// 	ld thetaNewX = 0.0; // theta(x1)
+	// 	for(ll i = 0; i >= 0; ++i) {
+	// 		ld stepSize = std::pow(beta, i);
+	// 		x1.clear();
+	// 		for(ll j = 0; j < x0.size(); ++j) {
+	// 			x1.push_back(x0[j] + stepSize * d0[0][j]);
+	// 		}
+	// 		std::cout << "x1:\n";
+	// 		for(ll i = 0; i < x1.size(); ++i) {
+	// 			std::cout << x1[i] << " ";
+	// 		}
+	// 		std::cout << "\n";
+			
+	// 		hResultNew.clear();
+	// 		hResultNew = {ComputePolynomialSystemOutput(h, x1, degree)};
+	// 		std::cout << "H(x1) Guess:\n";
+	// 		for(ll i = 0; i < hResultNew[0].size(); ++i) {
+	// 			std::cout << hResultNew[0][i] << " ";
+	// 		}
+	// 		std::cout << "\n";
+	// 		thetaNewX = ComputeNorm(hResultNew[0]);
+	// 		ld delta = (-alpha) * stepSize * ed0Product[0][0];
+	// 		if(thetaNewX - thetaOldX <= delta) {
+	// 			t0 = stepSize;
+	// 		} else {
+	// 			continue;
+	// 		}
+			
+	// 		std::vector<ld> deltaX; // x1 = x0 + deltaX
+	// 		for(ll i = 0; i < x0.size(); ++i) {
+	// 			deltaX.push_back(x1[i] - x0[i]);
+	// 		}
+	// 		ld maxComponent = MaxAbsoluteComponent(deltaX);
+	// 		if(maxComponent < gamma) {
+	// 			break;
+	// 		}
+	// 	}
+
+	// 	decryptedMessage.clear();
+	// 	for(ll i = 0; i < x1.size(); ++i) {
+	// 		decryptedMessage.push_back((ll) std::round(x1[i]));
+	// 	}
+
+	// 	std::vector<ll> hVerify = ComputePolynomialSystemOutput(h, decryptedMessage, degree);
+	// 	flag = true;
+	// 	for(ll i = 0; i < hVerify.size(); ++i) {
+	// 		if(hVerify[i] != 0) {
+	// 			flag = false;
+	// 			break;
+	// 		}
+	// 	}
+	// } while(!flag);
+
 	return decryptedMessage;
 }
 
@@ -400,6 +705,8 @@ void WritePublicKeyToFile(PublicKey publicKey, std::string filename) {
 void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 	
 	std::ofstream privateKeyFile (filename);
+
+	privateKeyFile << "n:\n" << privateKey.n << "\n\n";
 
 	privateKeyFile << "l:\n" << privateKey.l << "\n\n";
 
@@ -472,6 +779,7 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	// Save to privateKey
 	std::cout << "Saving Private Key...\n";
 	PrivateKey privateKey;
+	privateKey.n = n;
 	privateKey.l = l;
 	privateKey.lg = lg;
 	privateKey.phi = phiCoefficients;
@@ -499,7 +807,7 @@ std::vector<ll> EncryptMessage(PublicKey publicKey, std::vector<ll> message, ll 
 std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherText, ll degree) {
 	
 	// Computing T^-1(c)
-	std::vector<std::vector<ll>> inverseT = MatrixInvert(privateKey.T, privateKey.q);
+	std::vector<std::vector<ll>> inverseT = MatrixInverse(privateKey.T, privateKey.q);
 	std::vector<ll> inverseCipherText = DeVectorize(MatrixMultiplication(inverseT, Vectorize(cipherText))); // ComputePolynomialSystemOutput() not used as T is a system of linear polynomials
 	
 	// Computing the RHS of Phi(x) and Psi(x)
@@ -507,25 +815,25 @@ std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherT
 	std::vector<ll> bValues;
 	std::tie(aValues, bValues) = GetABValues(privateKey, inverseCipherText); // Get the RHS of Phi(x) and Psi(x)
 
-	// for(ll i = 0; i < inverseT.size(); ++i) {
-	// 	for(ll j = 0; j < inverseT[i].size(); ++j) {
-	// 		std::cout << inverseT[i][j] << " ";
-	// 	}
-	// 	std::cout << "\n";
-	// }
-	// std::cout << "\n";
-	// for(ll i = 0; i < inverseCipherText.size(); ++i) {
-	// 	std::cout << inverseCipherText[i] << " ";
-	// }
-	// std::cout << "\n";
-	// for(ll i = 0; i < aValues.size(); ++i) {
-	// 	std::cout << aValues[i] << " ";
-	// }
-	// std::cout << "\n";
-	// for(ll i = 0; i < bValues.size(); ++i) {
-	// 	std::cout << bValues[i] << " ";
-	// }
-	// std::cout << "\n";
+	for(ll i = 0; i < inverseT.size(); ++i) {
+		for(ll j = 0; j < inverseT[i].size(); ++j) {
+			std::cout << inverseT[i][j] << " ";
+		}
+		std::cout << "\n";
+	}
+	std::cout << "\n";
+	for(ll i = 0; i < inverseCipherText.size(); ++i) {
+		std::cout << inverseCipherText[i] << " ";
+	}
+	std::cout << "\n";
+	for(ll i = 0; i < aValues.size(); ++i) {
+		std::cout << aValues[i] << " ";
+	}
+	std::cout << "\n";
+	for(ll i = 0; i < bValues.size(); ++i) {
+		std::cout << bValues[i] << " ";
+	}
+	std::cout << "\n";
 
 	// Solving the Non Linear Polynomial System using Levenberg-Marquardt Method
 	std::vector<ll> decyptedMessage = SolveNonLinearEquationSystem(privateKey, aValues, bValues, degree);
@@ -582,6 +890,16 @@ int main() {
 	execTime = duration.count() / 1000.0;
 	std::cout << "Time taken to Encrypt Message = " << execTime << "s\n\n";
 
+	// std::vector<ll> test = ComputePolynomialSystemOutput(privateKey.phi, message, degree);
+	// for(ll i = 0; i < test.size(); ++i) {
+	// 	std::cout << test[i] << " ";
+	// }
+	// std::cout << "\n";
+	// test = ComputePolynomialSystemOutput(privateKey.psi, message, degree);
+	// for(ll i = 0; i < test.size(); ++i) {
+	// 	std::cout << test[i] << " ";
+	// }
+	// std::cout << "\n";
 	/**
 	 * ################################## Decrypting the Cipher Text using the Private Key ##################################
 	 */
