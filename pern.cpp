@@ -27,8 +27,6 @@ typedef struct PrivateKey {
 	ll q;
 } PrivateKey;
 
-// std::srand((unsigned) std::time(NULL)); // Setting a New Seed Value on Every Run
-
 // Output in range [0, b - 1]
 ll Modulo(ll a, ll b) {
 	ll mod = a % b;
@@ -776,6 +774,8 @@ std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherT
 }
 
 int main() {
+
+	std::srand(std::time(0)); // Setting a New Seed Value on Every Run
 	
 	std::cout << "Enter Security Parameters (n L Lg degree):\n";
 	ll n; // Number of Variables in System of Polynomial Equations
@@ -814,14 +814,16 @@ int main() {
 	startTime = std::chrono::high_resolution_clock::now();
 	
 	std::vector<ll> cipherText = EncryptMessage(publicKey, message, degree);
-	for(ll i = 0; i < cipherText.size(); ++i) {
-		std::cout << cipherText[i] << " ";
-	}
-	std::cout << "\n";
 
 	stopTime = std::chrono::high_resolution_clock::now();
 	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
 	execTime = duration.count() / 1000.0;
+
+	std::cout << "Encrypted Cipher Text: ";
+	for(ll i = 0; i < cipherText.size(); ++i) {
+		std::cout << cipherText[i] << " ";
+	}
+	std::cout << "\n";
 	std::cout << "Time taken to Encrypt Message = " << execTime << "s\n\n";
 
 	/**
@@ -832,14 +834,16 @@ int main() {
 	startTime = std::chrono::high_resolution_clock::now();
 	
 	std::vector<ll> decryptedMessage = DecryptCipherText(privateKey, cipherText, degree);
-	for(ll i = 0; i < decryptedMessage.size(); ++i) {
-		std::cout << decryptedMessage[i] << " ";
-	}
-	std::cout << "\n";
 
 	stopTime = std::chrono::high_resolution_clock::now();
 	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
 	execTime = duration.count() / 1000.0;
+
+	std::cout << "Decrypted Message: ";
+	for(ll i = 0; i < decryptedMessage.size(); ++i) {
+		std::cout << decryptedMessage[i] << " ";
+	}
+	std::cout << "\n";
 	std::cout << "Time taken to Decrypt Message = " << execTime << "s\n";
 
 	return 0;
