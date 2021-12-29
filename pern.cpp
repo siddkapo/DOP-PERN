@@ -10,21 +10,20 @@
 #define GAMMA 10e-5
 
 typedef struct PublicKey {
-	std::vector<std::vector<ll>> F;
-	ll q;
+	std::vector<std::vector<ll>> F; // Coefficients of the Public Polynomial System
 } PublicKey;
 
 typedef struct PrivateKey {
-	ll n;
-	ll l;
-	ll lg;
-	std::vector<std::vector<ll>> phi;
-	ll mPhi;
-	std::vector<std::vector<ll>> psi;
-	ll mPsi;
-	std::vector<ll> r;
-	std::vector<std::vector<ll>> T;
-	ll q;
+	ll n; // Number of Variables
+	ll l; // Defines Range of Input Message
+	ll lg; // Defines Range of Polynomial Coefficients
+	std::vector<std::vector<ll>> phi; // Polynomial System Phi
+	ll mPhi; // Largest Value in Codomain of Phi
+	std::vector<std::vector<ll>> psi; // Polynomial System Psi
+	ll mPsi; // Largest Value in Codomain of Psi
+	std::vector<ll> r; // r values r1,..., rn
+	std::vector<std::vector<ll>> T; // Random Affine Transformation T
+	ll q; // Prime q
 } PrivateKey;
 
 // Output in range [0, b - 1]
@@ -257,7 +256,7 @@ std::vector<std::vector<ll>> GetCentralMap(std::vector<std::vector<ll>> phiCoeff
 	return centralMap;
 }
 
-// Generate a Random Affine Tranformation over the Field (Fq)^n
+// Generate a Random Affine Transformation over the Field (Fq)^n
 std::vector<std::vector<ll>> GetAffineTransformation(ll n, ll q) {
 	std::vector<std::vector<ll>> affineT;
 	for(ll i = 0; i < n; ++i) {
@@ -649,8 +648,6 @@ void WritePublicKeyToFile(PublicKey publicKey, std::string filename) {
 		publicKeyFile << "\n";
 	}
 	
-	publicKeyFile << "\nq:\n" << publicKey.q << "\n";
-	
 	return;
 }
 
@@ -726,7 +723,6 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 	std::cout << "Saving Public Key...\n";
 	PublicKey publicKey;
 	publicKey.F = polynomialMapF;
-	publicKey.q = q;
 	WritePublicKeyToFile(publicKey, "PublicKey.txt");
 
 	// Save to privateKey
@@ -750,15 +746,16 @@ std::pair<PublicKey, PrivateKey> GenerateKeyPair(ll n, ll l, ll lg, ll degree) {
 // Encrypting the Input Message Using the Public Key
 std::vector<ll> EncryptMessage(PublicKey publicKey, std::vector<ll> message, ll degree) {
 	std::vector<ll> cipherText = ComputePolynomialSystemOutput(publicKey.F, message, degree);
-	for(ll i = 0; i < cipherText.size(); ++i) {
-		cipherText[i] = Modulo(cipherText[i], publicKey.q);
-	}
 	return cipherText;
 }
 
 // Decrypting the Cipher Text Using the Private Key
 std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherText, ll degree) {
-	
+	// Brings the Cipher Text to the Finite Field Fq
+	for(ll i = 0; i < cipherText.size(); ++i) {
+		cipherText[i] = Modulo(cipherText[i], privateKey.q);
+	}
+
 	// Computing T^-1(c)
 	std::vector<std::vector<ll>> inverseT = MatrixInverse(privateKey.T, privateKey.q);
 	std::vector<ll> inverseCipherText = DeVectorize(MatrixMultiplication(inverseT, Vectorize(cipherText))); // ComputePolynomialSystemOutput() not used as T is a system of linear polynomials
@@ -769,9 +766,9 @@ std::vector<ll> DecryptCipherText(PrivateKey privateKey, std::vector<ll> cipherT
 	std::tie(aValues, bValues) = GetABValues(privateKey, inverseCipherText); // Get the RHS of Phi(x) and Psi(x)
 
 	// Solving the Non Linear Polynomial System using Levenberg-Marquardt Method
-	std::vector<ll> decyptedMessage = SolveNonLinearEquationSystem(privateKey, aValues, bValues, degree);
+	std::vector<ll> decryptedMessage = SolveNonLinearEquationSystem(privateKey, aValues, bValues, degree);
 
-	return decyptedMessage;
+	return decryptedMessage;
 }
 
 int main() {
@@ -790,15 +787,15 @@ int main() {
 	 */
 
 	std::cout << "\nGenerating Key Pair...\n";
-	auto startTime = std::chrono::high_resolution_clock::now();
+	auto startTimeKG = std::chrono::high_resolution_clock::now();
 	
 	std::pair<PublicKey, PrivateKey> keyPair = GenerateKeyPair(n, l, lg, degree);
 	PublicKey publicKey = keyPair.first;
 	PrivateKey privateKey = keyPair.second;
 	
-	auto stopTime = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
-	double execTime = duration.count() / 1000.0;
+	auto stopTimeKG = std::chrono::high_resolution_clock::now();
+	auto durationKG = std::chrono::duration_cast<std::chrono::milliseconds>(stopTimeKG - startTimeKG);
+	double execTime = durationKG.count() / 1000.0;
 	std::cout << "Time taken to generate Key Pair = " << execTime << "s\n\n";
 
 	/**
@@ -812,33 +809,33 @@ int main() {
 	}
 
 	std::cout << "\nEncrypting Input Message...\n";
-	startTime = std::chrono::high_resolution_clock::now();
+	auto startTimeEnc = std::chrono::high_resolution_clock::now();
 	
 	std::vector<ll> cipherText = EncryptMessage(publicKey, message, degree);
 
-	stopTime = std::chrono::high_resolution_clock::now();
-	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
-	execTime = duration.count() / 1000.0;
+	auto stopTimeEnc = std::chrono::high_resolution_clock::now();
+	auto durationEnc = std::chrono::duration_cast<std::chrono::nanoseconds>(stopTimeEnc - startTimeEnc);
+	execTime = durationEnc.count() / 1000.0;
 
 	std::cout << "Encrypted Cipher Text: ";
 	for(ll i = 0; i < cipherText.size(); ++i) {
 		std::cout << cipherText[i] << " ";
 	}
 	std::cout << "\n";
-	std::cout << "Time taken to Encrypt Message = " << execTime << "s\n\n";
+	std::cout << "Time taken to Encrypt Message = " << execTime << "us\n\n";
 
 	/**
 	 * ################################## Decrypting the Cipher Text using the Private Key ##################################
 	 */
 
 	std::cout << "Decrypting Cipher Text...\n";
-	startTime = std::chrono::high_resolution_clock::now();
+	auto startTimeDec = std::chrono::high_resolution_clock::now();
 	
 	std::vector<ll> decryptedMessage = DecryptCipherText(privateKey, cipherText, degree);
 
-	stopTime = std::chrono::high_resolution_clock::now();
-	duration = std::chrono::duration_cast<std::chrono::milliseconds>(stopTime - startTime);
-	execTime = duration.count() / 1000.0;
+	auto stopTimeDec = std::chrono::high_resolution_clock::now();
+	auto durationDec = std::chrono::duration_cast<std::chrono::milliseconds>(stopTimeDec - startTimeDec);
+	execTime = durationDec.count() / 1000.0;
 
 	std::cout << "Decrypted Message: ";
 	for(ll i = 0; i < decryptedMessage.size(); ++i) {
