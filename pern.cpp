@@ -662,7 +662,7 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 
 	privateKeyFile << "lg:\n" << privateKey.lg << "\n\n";
 	
-	privateKeyFile << "Phi\n";
+	privateKeyFile << "Phi:\n";
 	for(ll i = 0; i < privateKey.phi.size(); ++i) {
 		for(ll j = 0; j < privateKey.phi[i].size(); ++j) {
 			privateKeyFile << privateKey.phi[i][j] << " ";
@@ -672,7 +672,7 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 
 	privateKeyFile << "\nMPhi:\n" << privateKey.mPhi << "\n\n";
 	
-	privateKeyFile << "Psi\n";
+	privateKeyFile << "Psi:\n";
 	for(ll i = 0; i < privateKey.psi.size(); ++i) {
 		for(ll j = 0; j < privateKey.psi[i].size(); ++j) {
 			privateKeyFile << privateKey.psi[i][j] << " ";
@@ -682,6 +682,7 @@ void WritePrivateKeyToFile(PrivateKey privateKey, std::string filename) {
 	
 	privateKeyFile << "\nMPsi:\n" << privateKey.mPsi << "\n\n";
 	
+	privateKeyFile << "r Values:\n";
 	for(ll i = 0; i < privateKey.r.size(); ++i) {
 		privateKeyFile << privateKey.r[i] << " ";
 	}
