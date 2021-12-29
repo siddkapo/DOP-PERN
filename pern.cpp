@@ -776,7 +776,7 @@ int main() {
 
 	std::srand(std::time(0)); // Setting a New Seed Value on Every Run
 	
-	std::cout << "Enter Security Parameters (n L Lg degree):\n";
+	std::cout << "Enter Security Parameters (n L Lg):\n";
 	ll n; // Number of Variables in System of Polynomial Equations
 	ll l; // Odd Positive Integer
 	ll lg; // Odd Positive Integer
