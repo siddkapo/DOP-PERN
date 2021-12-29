@@ -37,6 +37,7 @@ ll Modulo(ll a, ll b) {
 // Output in range (-b / 2, b / 2]
 ll LeastAbsoluteRemainder(ll a, ll b) {
 	ll lar = a % b;
+	lar = (lar + b) % b;
 	lar = lar > b / 2 ? lar - b : lar;
 	return lar;
 }
