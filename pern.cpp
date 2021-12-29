@@ -1,3 +1,9 @@
+/**
+ * Author: Siddharth Kapoor (2018A7PS0232P)
+ * Email: f20180232@pilani.bits-pilani.ac.in
+ * BITS Pilani
+ */
+
 #include <bits/stdc++.h>
 #include <chrono>
 #include <fstream>
